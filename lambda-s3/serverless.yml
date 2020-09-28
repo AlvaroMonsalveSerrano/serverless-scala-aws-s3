@@ -1,0 +1,71 @@
+
+service: lambda-s3
+
+
+provider:
+  name: aws
+  project: scalaproject
+  runtime: java8
+  stage: ${opt:stage, 'dev'}
+  region: us-east-1
+  timeout: 900
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+      Resource:
+        - "arn:aws:s3:::prueba2fromlambdafunction/*"
+
+custom:
+  currentStage: ${opt:stage, self:provider.stage}
+  currentProject: ${self:provider.project}
+  currentRegion: ${opt:region, self:provider.region}
+
+
+environment:
+
+
+package:
+  individually: true
+  artifact: target/scala-2.13/lambda-s3.jar
+
+
+functions:
+  lambda-s3:
+    handler: app.Handler
+    role: LambdaRole
+    environment:
+      ENV: ${self:custom.currentStage}
+
+
+resources:
+  Resources:
+    LambdaRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName: ${self:custom.currentProject}-lambda-s3-${self:custom.currentStage}
+        AssumeRolePolicyDocument:
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - lambda.amazonaws.com
+              Action: sts:AssumeRole
+        Policies:
+          - PolicyName: ${self:custom.currentProject}-lambda-s3-${self:custom.currentStage}
+            PolicyDocument:
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - logs:CreateLogGroup
+                    - logs:CreateLogStream
+                    - logs:PutLogEvents
+                    - s3:*
+#                    - ec2:DescribeNetworkInterfaces
+#                    - ec2:CreateNetworkInterface
+#                    - ec2:DeleteNetworkInterface
+#                    - ec2:DescribeInstances
+#                    - ec2:AttachNetworkInterface
+                  Resource: "*"
+
